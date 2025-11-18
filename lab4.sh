@@ -29,12 +29,21 @@ print_help() {
   --performance <группа>         Вывод списка группы, упорядоченного по
                                  успеваемости (средний балл)
 
+  --dossier-student <фамилия>    Вывод досье студента по фамилии
+
+  --dossier-group <группа>       Вывод досье всех студентов группы
+
+  --dossier-all                  Вывод всех досье студентов
+
 ФОРМАТ НОМЕРА ГРУППЫ:
   A-XX-XX или Ae-XX-XX (например: A-06-04, Ae-21-22)
 
 ПРИМЕРЫ:
   ./lab4.sh --best-grades A-06-04
   ./lab4.sh --performance Ae-21-22
+  ./lab4.sh --dossier-student PashkovskyA
+  ./lab4.sh --dossier-group A-06-04
+  ./lab4.sh --dossier-all
 
 EOF
 }
@@ -61,6 +70,28 @@ validate_group() {
     # Проверка прав на чтение
     if [[ ! -r "$GROUPS_DIR/$group" ]]; then
         echo "Ошибка: Нет прав на чтение файла группы '$group'"
+        exit 1
+    fi
+}
+
+validate_student() {
+    local student="$1"
+    local first_letter="${student:0:1}"
+    local file="$NOTES_DIR/${first_letter}Names.log"
+
+    if [[ ! -f "$file" ]]; then
+        echo "Ошибка: Файл досье '${first_letter}Names.log' не найден"
+        exit 1
+    fi
+
+    if [[ ! -r "$file" ]]; then
+        echo "Ошибка: Нет прав на чтение файла досье"
+        exit 1
+    fi
+
+    # Проверка существования студента в досье
+    if ! grep -q "^$student$" "$file" 2>/dev/null; then
+        echo "Ошибка: У студента '$student' нет досье"
         exit 1
     fi
 }
@@ -262,6 +293,116 @@ show_performance() {
     echo ""
 }
 
+# Функция для вывода досье студента
+show_dossier_student() {
+    local student="$1"
+    local first_letter="${student:0:1}"
+    local file="$NOTES_DIR/${first_letter}Names.log"
+
+    echo ""
+    echo "=========================================="
+    echo "Досье студента: $student"
+    echo "=========================================="
+    echo ""
+
+    # Извлекаем досье с помощью sed
+    # Ищем строку с именем студента, затем выводим следующую строку до следующего разделителя
+    sed -n "/^$student$/,/^====/{
+        /^$student$/d
+        /^====/q
+        p
+    }" "$file"
+
+    echo ""
+}
+
+# Функция для вывода досье всех студентов группы
+show_dossier_group() {
+    local group="$1"
+
+    echo "=========================================="
+    echo "Досье студентов группы '$group'"
+    echo "=========================================="
+    echo ""
+
+    printf "%-37s | %-21s | %s\n" "Студент" "Группа" "Досье"
+    echo "--------------------------------------------------------------------------------------------"
+
+    while IFS= read -r student; do
+        [[ -z "$student" ]] && continue
+
+        local first_letter="${student:0:1}"
+        local file="$NOTES_DIR/${first_letter}Names.log"
+
+        if [[ -f "$file" ]] && grep -q "^$student$" "$file" 2>/dev/null; then
+            # Извлекаем досье с помощью sed (как в show_dossier_student)
+            dossier=$(sed -n "/^$student$/,/^====/{
+                /^$student$/d
+                /^====/q
+                p
+            }" "$file" | tr '\n' ' ' | sed 's/[[:space:]]*$//')
+
+            printf "%-30s | %-15s | %s\n" "$student" "$group" "$dossier"
+        else
+            printf "%-30s | %-15s | %s\n" "$student" "$group" "Нет досье"
+        fi
+    done < "$GROUPS_DIR/$group"
+
+    echo ""
+}
+
+# Функция для вывода всех досье
+show_dossier_all() {
+    echo ""
+    echo "=========================================="
+    echo "Все досье студентов"
+    echo "=========================================="
+    echo ""
+
+    printf "%-37s | %-21s | %s\n" "Студент" "Группа" "Досье"
+    echo "--------------------------------------------------------------------------------------------"
+
+    for notes_file in "$NOTES_DIR"/*Names.log; do
+        [[ ! -f "$notes_file" ]] && continue
+
+        # Извлекаем имена студентов из файла - они идут после разделителя =====
+        while IFS= read -r line; do
+            # Пропускаем пустые строки и разделители
+            [[ -z "$line" ]] && continue
+            [[ "$line" =~ ^=+$ ]] && continue
+
+            # Проверяем, является ли строка именем студента (начинается с заглавной буквы, без пробелов)
+            if [[ "$line" =~ ^[A-Z][a-zA-Z-]*[A-Z]+$ ]]; then
+                student="$line"
+
+                # Находим группу студента
+                group=""
+                for group_file in "$GROUPS_DIR"/*; do
+                    if grep -q "^$student$" "$group_file" 2>/dev/null; then
+                        group=$(basename "$group_file")
+                        break
+                    fi
+                done
+
+                if [[ -z "$group" ]]; then
+                    group="Не найдена"
+                fi
+
+                # Извлекаем досье
+                dossier=$(sed -n "/^$student$/,/^====/{
+                    /^$student$/d
+                    /^====/q
+                    p
+                }" "$notes_file" | tr '\n' ' ' | sed 's/[[:space:]]*$//')
+
+                printf "%-30s | %-15s | %s\n" "$student" "$group" "$dossier"
+            fi
+        done < "$notes_file"
+    done
+
+    echo ""
+}
+
 # ==================== ГЛАВНАЯ ЛОГИКА ====================
 
 main() {
@@ -301,6 +442,34 @@ main() {
             fi
             validate_group "$2"
             show_performance "$2"
+            ;;
+
+        --dossier-student)
+            if [[ $# -ne 2 ]]; then
+                echo "Ошибка: Неверное количество аргументов"
+                echo "Использование: $0 --dossier-student <фамилия>"
+                exit 1
+            fi
+            validate_student "$2"
+            show_dossier_student "$2"
+            ;;
+
+        --dossier-group)
+            if [[ $# -ne 2 ]]; then
+                echo "Ошибка: Неверное количество аргументов"
+                echo "Использование: $0 --dossier-group <группа>"
+                exit 1
+            fi
+            validate_group "$2"
+            show_dossier_group "$2"
+            ;;
+
+        --dossier-all)
+            if [[ $# -ne 1 ]]; then
+                echo "Ошибка: Флаг --dossier-all не принимает аргументов"
+                exit 1
+            fi
+            show_dossier_all
             ;;
 
         *)
