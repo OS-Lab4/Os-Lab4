@@ -39,10 +39,10 @@ print_help() {
   A-XX-XX или Ae-XX-XX (например: A-06-04, Ae-21-22)
 
 ПРИМЕРЫ:
-  ./lab4.sh --best-grades A-06-04
+  ./lab4.sh --best-grades A-06-22
   ./lab4.sh --performance Ae-21-22
-  ./lab4.sh --dossier-student PashkovskyA
-  ./lab4.sh --dossier-group A-06-04
+  ./lab4.sh --dossier-student RomanovDanA
+  ./lab4.sh --dossier-group A-06-22
   ./lab4.sh --dossier-all
 
 EOF
