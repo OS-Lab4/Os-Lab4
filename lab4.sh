@@ -55,21 +55,21 @@ validate_group() {
 
     # Проверка формата группы
     if ! [[ "$group" =~ ^(A|Ae)-[0-9]{2}-[0-9]{2}$ ]]; then
-        echo "Ошибка: Номер группы не соответствует формату (A-XX-XX или Ae-XX-XX)"
+        printf "%s\n" "Ошибка: Номер группы не соответствует формату (A-XX-XX или Ae-XX-XX)"
         exit 1
     fi
 
     # Проверка существования файла группы
     if [[ ! -f "$GROUPS_DIR/$group" ]]; then
-        echo "Ошибка: Группа '$group' не существует"
-        echo "Доступные группы:"
+        printf "%s\n" "Ошибка: Группа '$group' не существует"
+        printf "%s\n" "Доступные группы:"
         ls "$GROUPS_DIR" | head -10
         exit 1
     fi
 
     # Проверка прав на чтение
     if [[ ! -r "$GROUPS_DIR/$group" ]]; then
-        echo "Ошибка: Нет прав на чтение файла группы '$group'"
+        printf "%s\n" "Ошибка: Нет прав на чтение файла группы '$group'"
         exit 1
     fi
 }
@@ -80,18 +80,18 @@ validate_student() {
     local file="$NOTES_DIR/${first_letter}Names.log"
 
     if [[ ! -f "$file" ]]; then
-        echo "Ошибка: Файл досье '${first_letter}Names.log' не найден"
+        printf "%s\n" "Ошибка: Файл досье '${first_letter}Names.log' не найден"
         exit 1
     fi
 
     if [[ ! -r "$file" ]]; then
-        echo "Ошибка: Нет прав на чтение файла досье"
+        printf "%s\n" "Ошибка: Нет прав на чтение файла досье"
         exit 1
     fi
 
     # Проверка существования студента в досье
     if ! grep -q "^$student$" "$file" 2>/dev/null; then
-        echo "Ошибка: У студента '$student' нет досье"
+        printf "%s\n" "Ошибка: У студента '$student' нет досье"
         exit 1
     fi
 }
@@ -102,11 +102,11 @@ validate_student() {
 count_grades() {
     local group="$1"
 
-    echo ""
-    echo "=========================================="
-    echo "Анализ оценок для группы '$group'"
-    echo "=========================================="
-    echo ""
+    printf "\n"
+    printf '%*s\n' 34 '' | tr ' ' '='
+    printf "%s\n" "Анализ оценок для группы '$group'"
+    printf '%*s\n' 34 '' | tr ' ' '='
+    printf "\n"
 
     # Создаём временный файл для хранения данных
     local temp_file=$(mktemp)
@@ -142,7 +142,7 @@ count_grades() {
         done
 
         # Записываем результаты в временный файл
-        echo "$student|$count_3|$count_4|$count_5" >> "$temp_file"
+        printf "%s\n" "$student|$count_3|$count_4|$count_5" >> "$temp_file"
     done < "$GROUPS_DIR/$group"
 
     # Находим студентов с максимальным количеством троек, четвёрок и пятёрок
@@ -151,34 +151,34 @@ count_grades() {
     local best_5=$(sort -t'|' -k4 -rn "$temp_file" | head -1)
 
     # Вывод таблицы для троек
-    echo "Максимальное количество оценок 3"
+    printf "%s\n" "Максимальное количество оценок 3"
     printf "%-32s | %-21s | %-17s | %-17s | %-s\n"  "Студент" "Группа" "Кол-во 3" "Кол-во 4" "Кол-во 5"
-    echo "--------------------------------------------------------------------------------------------"
+    printf '%*s\n' 86 '' | tr ' ' '-'
     if [[ -n "$best_3" ]]; then
         IFS='|' read -r student c3 c4 c5 <<< "$best_3"
         printf "%-25s | %-15s | %-12s | %-12s | %-12s\n" "$student" "$group" "$c3" "$c4" "$c5"
     fi
-    echo ""
+    printf "\n"
 
     # Вывод таблицы для четвёрок
-    echo "Максимальное количество оценок 4"
+    printf "%s\n" "Максимальное количество оценок 4"
     printf "%-32s | %-21s | %-17s | %-17s | %-s\n"  "Студент" "Группа" "Кол-во 3" "Кол-во 4" "Кол-во 5"
-    echo "--------------------------------------------------------------------------------------------"
+    printf '%*s\n' 86 '' | tr ' ' '-'
     if [[ -n "$best_4" ]]; then
         IFS='|' read -r student c3 c4 c5 <<< "$best_4"
         printf "%-25s | %-15s | %-12s | %-12s | %-12s\n" "$student" "$group" "$c3" "$c4" "$c5"
     fi
-    echo ""
+    printf "\n"
 
     # Вывод таблицы для пятёрок
-    echo "Максимальное количество оценок 5"
+    printf "%s\n" "Максимальное количество оценок 5"
     printf "%-32s | %-21s | %-17s | %-17s | %-s\n"  "Студент" "Группа" "Кол-во 3" "Кол-во 4" "Кол-во 5"
-    echo "--------------------------------------------------------------------------------------------"
+    printf '%*s\n' 86 '' | tr ' ' '-'
     if [[ -n "$best_5" ]]; then
         IFS='|' read -r student c3 c4 c5 <<< "$best_5"
         printf "%-25s | %-15s | %-12s | %-12s | %-12s\n" "$student" "$group" "$c3" "$c4" "$c5"
     fi
-    echo ""
+    printf "\n"
 
     # Удаляем временный файл
     rm -f "$temp_file"
@@ -206,10 +206,11 @@ convert_grade_to_number() {
 show_performance() {
     local group="$1"
 
-    echo "=========================================="
-    echo "Сводная таблица с успеваемостью для группы '$group'"
-    echo "=========================================="
-    echo ""
+    printf "\n"
+    printf '%*s\n' 52 '' | tr ' ' '='
+    printf "%s\n" "Сводная таблица с успеваемостью для группы '$group'"
+    printf '%*s\n' 52 '' | tr ' ' '='
+    printf "\n"
 
     # Создаём временный файл для хранения данных
     local temp_file=$(mktemp)
@@ -275,13 +276,13 @@ show_performance() {
         fi
 
         # Записываем результаты в временный файл
-        echo "$student|$pop_avg|$circus_avg|$overall_avg" >> "$temp_file"
+        printf "%s\n" "$student|$pop_avg|$circus_avg|$overall_avg" >> "$temp_file"
     done < "$GROUPS_DIR/$group"
 
     # Вывод таблицы
     # Вручную добавляем пробелы к кириллическим заголовкам для выравнивания
     printf "%-33s | %-44s | %-31s | %-s\n"  "Студент" "Поп-Культуроведение" "Цирковое дело" "Общее усреднённое"
-    echo "-----------------------------------------------------------------------------------------------"
+    printf '%*s\n' 98 '' | tr ' ' '-'
 
     # Сортируем по общему среднему баллу (по убыванию), затем по фамилии
     sort -t'|' -k4 -rn -k1 "$temp_file" | while IFS='|' read -r student pop_avg circus_avg overall_avg; do
@@ -290,7 +291,7 @@ show_performance() {
 
     # Удаляем временный файл
     rm -f "$temp_file"
-    echo ""
+    printf "\n"
 }
 
 # Функция для вывода досье студента
@@ -299,11 +300,11 @@ show_dossier_student() {
     local first_letter="${student:0:1}"
     local file="$NOTES_DIR/${first_letter}Names.log"
 
-    echo ""
-    echo "=========================================="
-    echo "Досье студента: $student"
-    echo "=========================================="
-    echo ""
+    printf "\n"
+    printf "%*s\n" 26 '' | tr ' ' '='
+    printf "Досье студента: $student\n"
+    printf "%*s\n" 26 '' | tr ' ' '='
+    printf "\n"
 
     # Извлекаем досье с помощью sed
     # Ищем строку с именем студента, затем выводим следующую строку до следующего разделителя
@@ -313,20 +314,20 @@ show_dossier_student() {
         p
     }" "$file"
 
-    echo ""
+    printf "\n"
 }
 
 # Функция для вывода досье всех студентов группы
 show_dossier_group() {
     local group="$1"
 
-    echo "=========================================="
-    echo "Досье студентов группы '$group'"
-    echo "=========================================="
-    echo ""
+    printf '%*s\n' 33 '' | tr ' ' '='
+    printf "%s\n" "Досье студентов группы '$group'"
+    printf '%*s\n' 33 '' | tr ' ' '='
+    printf "\n"
 
     printf "%-37s | %-21s | %s\n" "Студент" "Группа" "Досье"
-    echo "--------------------------------------------------------------------------------------------"
+    printf '%*s\n' 60 '' | tr ' ' '-'
 
     while IFS= read -r student; do
         [[ -z "$student" ]] && continue
@@ -348,19 +349,19 @@ show_dossier_group() {
         fi
     done < "$GROUPS_DIR/$group"
 
-    echo ""
+    printf "\n"
 }
 
 # Функция для вывода всех досье
 show_dossier_all() {
-    echo ""
-    echo "=========================================="
-    echo "Все досье студентов"
-    echo "=========================================="
-    echo ""
+    printf "\n"
+    printf '%*s\n' 19 '' | tr ' ' '='
+    printf "%s\n" "Все досье студентов"
+    printf '%*s\n' 19 '' | tr ' ' '='
+    printf "\n"
 
     printf "%-37s | %-21s | %s\n" "Студент" "Группа" "Досье"
-    echo "--------------------------------------------------------------------------------------------"
+    printf '%*s\n' 60 '' | tr ' ' '-'
 
     for notes_file in "$NOTES_DIR"/*Names.log; do
         [[ ! -f "$notes_file" ]] && continue
@@ -400,7 +401,7 @@ show_dossier_all() {
         done < "$notes_file"
     done
 
-    echo ""
+    printf "\n"
 }
 
 # ==================== ГЛАВНАЯ ЛОГИКА ====================
@@ -408,14 +409,14 @@ show_dossier_all() {
 main() {
     # Проверка наличия аргументов
     if [[ $# -eq 0 ]]; then
-        echo "Ошибка: Не указаны аргументы"
-        echo "Используйте --help для справки"
+        printf "%s\n" "Ошибка: Не указаны аргументы"
+        printf "%s\n" "Используйте --help для справки"
         exit 1
     fi
 
     # Проверка существования базовой директории
     if [[ ! -d "$BASE_DIR" ]]; then
-        echo "Ошибка: Директория '$BASE_DIR' не найдена"
+        printf "%s\n" "Ошибка: Директория '$BASE_DIR' не найдена"
         exit 1
     fi
 
@@ -426,8 +427,8 @@ main() {
 
         --best-grades)
             if [[ $# -ne 2 ]]; then
-                echo "Ошибка: Неверное количество аргументов"
-                echo "Использование: $0 --best-grades <группа>"
+                printf "%s\n" "Ошибка: Неверное количество аргументов"
+                printf "%s\n" "Использование: $0 --best-grades <группа>"
                 exit 1
             fi
             validate_group "$2"
@@ -436,8 +437,8 @@ main() {
 
         --performance)
             if [[ $# -ne 2 ]]; then
-                echo "Ошибка: Неверное количество аргументов"
-                echo "Использование: $0 --performance <группа>"
+                printf "%s\n" "Ошибка: Неверное количество аргументов"
+                printf "%s\n" "Использование: $0 --performance <группа>"
                 exit 1
             fi
             validate_group "$2"
@@ -446,8 +447,8 @@ main() {
 
         --dossier-student)
             if [[ $# -ne 2 ]]; then
-                echo "Ошибка: Неверное количество аргументов"
-                echo "Использование: $0 --dossier-student <фамилия>"
+                printf "%s\n" "Ошибка: Неверное количество аргументов"
+                printf "%s\n" "Использование: $0 --dossier-student <ФамилияИО>"
                 exit 1
             fi
             validate_student "$2"
@@ -456,8 +457,8 @@ main() {
 
         --dossier-group)
             if [[ $# -ne 2 ]]; then
-                echo "Ошибка: Неверное количество аргументов"
-                echo "Использование: $0 --dossier-group <группа>"
+                printf "%s\n" "Ошибка: Неверное количество аргументов"
+                printf "%s\n" "Использование: $0 --dossier-group <группа>"
                 exit 1
             fi
             validate_group "$2"
@@ -466,15 +467,15 @@ main() {
 
         --dossier-all)
             if [[ $# -ne 1 ]]; then
-                echo "Ошибка: Флаг --dossier-all не принимает аргументов"
+                printf "%s\n" "Ошибка: Флаг --dossier-all не принимает аргументов"
                 exit 1
             fi
             show_dossier_all
             ;;
 
         *)
-            echo "Ошибка: Неизвестный флаг '$1'"
-            echo "Используйте --help для справки"
+            printf "%s\n" "Ошибка: Неизвестный флаг '$1'"
+            printf "%s\n" "Используйте --help для справки"
             exit 1
             ;;
     esac
